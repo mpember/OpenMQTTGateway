@@ -37,7 +37,7 @@
 
 RCSwitch mySwitch = RCSwitch();
 
-#  ifdef ZmqttDiscovery
+#  if defined(ZmqttDiscovery) && !defined(RF_DISABLE_TRANSMIT)
 void RFtoMQTTdiscovery(SIGNAL_SIZE_UL_ULL MQTTvalue) { //on the fly switch creation from received RF values
   char val[11];
   sprintf(val, "%lu", MQTTvalue);
@@ -50,7 +50,8 @@ void RFtoMQTTdiscovery(SIGNAL_SIZE_UL_ULL MQTTvalue) { //on the fly switch creat
                   subjectRFtoMQTT, switchRF[1], (char*)getUniqueId(switchRF[1], switchRF[2]).c_str(),
                   will_Topic, switchRF[3], switchRF[4],
                   switchRF[5], switchRF[6], switchRF[7],
-                  0, "", "", true, subjectMQTTtoRF);
+                  0, "", "", true, subjectMQTTtoRF,
+                  "", "", "", "", false);
 }
 #  endif
 
@@ -60,8 +61,7 @@ void setupRF() {
   Log.notice(F("RF_RECEIVER_GPIO: %d " CR), RF_RECEIVER_GPIO);
 #  ifdef ZradioCC1101 //receiving with CC1101
   ELECHOUSE_cc1101.Init();
-  ELECHOUSE_cc1101.setMHZ(CC1101_FREQUENCY);
-  ELECHOUSE_cc1101.SetRx(CC1101_FREQUENCY);
+  ELECHOUSE_cc1101.SetRx(receiveMhz);
 #  endif
 #  ifdef RF_DISABLE_TRANSMIT
   mySwitch.disableTransmit();
@@ -70,12 +70,17 @@ void setupRF() {
 #  endif
   mySwitch.setRepeatTransmit(RF_EMITTER_REPEAT);
   mySwitch.enableReceive(RF_RECEIVER_GPIO);
+  Log.trace(F("ZgatewayRF command topic: %s%s" CR), mqtt_topic, subjectMQTTtoRF);
   Log.trace(F("ZgatewayRF setup done" CR));
 }
 
 void RFtoMQTT() {
   if (mySwitch.available()) {
+#  ifdef ZradioCC1101 //receiving with CC1101
+    const int JSON_MSG_CALC_BUFFER = JSON_OBJECT_SIZE(5);
+#  else
     const int JSON_MSG_CALC_BUFFER = JSON_OBJECT_SIZE(4);
+#  endif
     StaticJsonBuffer<JSON_MSG_CALC_BUFFER> jsonBuffer;
     JsonObject& RFdata = jsonBuffer.createObject();
     Log.trace(F("Rcv. RF" CR));
@@ -87,11 +92,15 @@ void RFtoMQTT() {
     RFdata.set("protocol", (int)mySwitch.getReceivedProtocol());
     RFdata.set("length", (int)mySwitch.getReceivedBitlength());
     RFdata.set("delay", (int)mySwitch.getReceivedDelay());
+#  ifdef ZradioCC1101 // set Receive off and Transmitt on
+    RFdata.set("mhz", receiveMhz);
+#  endif
     mySwitch.resetAvailable();
 
     if (!isAduplicateSignal(MQTTvalue) && MQTTvalue != 0) { // conditions to avoid duplications of RF -->MQTT
-#  ifdef ZmqttDiscovery //component creation for HA
-      RFtoMQTTdiscovery(MQTTvalue);
+#  if defined(ZmqttDiscovery) && !defined(RF_DISABLE_TRANSMIT) //component creation for HA
+      if (disc)
+        RFtoMQTTdiscovery(MQTTvalue);
 #  endif
       pub(subjectRFtoMQTT, RFdata);
       // Casting "receivedSignal[o].value" to (unsigned long) because ArduinoLog doesn't support uint64_t for ESP's
@@ -108,7 +117,7 @@ void RFtoMQTT() {
 #  ifdef simpleReceiving
 void MQTTtoRF(char* topicOri, char* datacallback) {
 #    ifdef ZradioCC1101 // set Receive off and Transmitt on
-  ELECHOUSE_cc1101.SetTx(CC1101_FREQUENCY);
+  ELECHOUSE_cc1101.SetTx(receiveMhz);
   mySwitch.disableReceive();
   mySwitch.enableTransmit(RF_EMITTER_GPIO);
 #    endif
@@ -160,7 +169,7 @@ void MQTTtoRF(char* topicOri, char* datacallback) {
     pub(subjectGTWRFtoMQTT, datacallback); // we acknowledge the sending by publishing the value to an acknowledgement topic, for the moment even if it is a signal repetition we acknowledge also
   }
 #    ifdef ZradioCC1101 // set Receive on and Transmitt off
-  ELECHOUSE_cc1101.SetRx(CC1101_FREQUENCY);
+  ELECHOUSE_cc1101.SetRx(receiveMhz);
   mySwitch.disableTransmit();
   mySwitch.enableReceive(RF_RECEIVER_GPIO);
 #    endif
@@ -169,11 +178,6 @@ void MQTTtoRF(char* topicOri, char* datacallback) {
 
 #  ifdef jsonReceiving
 void MQTTtoRF(char* topicOri, JsonObject& RFdata) { // json object decoding
-#    ifdef ZradioCC1101 // set Receive off and Transmitt on
-  ELECHOUSE_cc1101.SetTx(CC1101_FREQUENCY);
-  mySwitch.disableReceive();
-  mySwitch.enableTransmit(RF_EMITTER_GPIO);
-#    endif
   if (cmpToMainTopic(topicOri, subjectMQTTtoRF)) {
     Log.trace(F("MQTTtoRF json" CR));
     SIGNAL_SIZE_UL_ULL data = RFdata["value"];
@@ -185,6 +189,15 @@ void MQTTtoRF(char* topicOri, JsonObject& RFdata) { // json object decoding
       Log.notice(F("RF Protocol:%d" CR), valuePRT);
       Log.notice(F("RF Pulse Lgth: %d" CR), valuePLSL);
       Log.notice(F("Bits nb: %d" CR), valueBITS);
+#    ifdef ZradioCC1101 // set Receive off and Transmitt on
+      float trMhz = RFdata["mhz"] | CC1101_FREQUENCY;
+      if (validFrequency((int)trMhz)) {
+        ELECHOUSE_cc1101.SetTx(trMhz);
+        Log.notice(F("Transmit mhz: %F" CR), trMhz);
+        mySwitch.disableReceive();
+        mySwitch.enableTransmit(RF_EMITTER_GPIO);
+      }
+#    endif
       mySwitch.setRepeatTransmit(valueRPT);
       mySwitch.setProtocol(valuePRT, valuePLSL);
       mySwitch.send(data, valueBITS);
@@ -192,14 +205,67 @@ void MQTTtoRF(char* topicOri, JsonObject& RFdata) { // json object decoding
       pub(subjectGTWRFtoMQTT, RFdata); // we acknowledge the sending by publishing the value to an acknowledgement topic, for the moment even if it is a signal repetition we acknowledge also
       mySwitch.setRepeatTransmit(RF_EMITTER_REPEAT); // Restore the default value
     } else {
-      Log.error(F("MQTTtoRF Fail json" CR));
-    }
-  }
+      bool success = false;
+      if (RFdata.containsKey("active")) {
+        Log.trace(F("RF active:" CR));
+        activeReceiver = ACTIVE_RF;
+        success = true;
+      }
 #    ifdef ZradioCC1101 // set Receive on and Transmitt off
-  ELECHOUSE_cc1101.SetRx(CC1101_FREQUENCY);
-  mySwitch.disableTransmit();
-  mySwitch.enableReceive(RF_RECEIVER_GPIO);
+      float tempMhz = RFdata["mhz"];
+      if (RFdata.containsKey("mhz") && validFrequency(tempMhz)) {
+        receiveMhz = tempMhz;
+        Log.notice(F("Receive mhz: %F" CR), receiveMhz);
+        success = true;
+      }
 #    endif
+      if (success) {
+        pub(subjectGTWRFtoMQTT, RFdata); // we acknowledge the sending by publishing the value to an acknowledgement topic, for the moment even if it is a signal repetition we acknowledge also
+      } else {
+#    ifndef ARDUINO_AVR_UNO // Space issues with the UNO
+        pub(subjectGTWRFtoMQTT, "{\"Status\": \"Error\"}"); // Fail feedback
+#    endif
+        Log.error(F("MQTTtoRF Fail json" CR));
+      }
+    }
+    enableActiveReceiver();
+  }
 }
 #  endif
+
+int receiveInterupt = -1;
+
+void disableRFReceive() {
+  Log.trace(F("disableRFReceive %d" CR), receiveInterupt);
+  if (receiveInterupt != -1) {
+    receiveInterupt = -1;
+    mySwitch.disableReceive();
+  }
+}
+
+void enableRFReceive() {
+#  ifdef ZradioCC1101
+  Log.notice(F("Switching to RF Receiver: %F" CR), receiveMhz);
+#  else
+  Log.notice(F("Switching to RF Receiver" CR));
+#  endif
+#  ifndef ARDUINO_AVR_UNO // Space issues with the UNO
+#    ifdef ZgatewayPilight
+  disablePilightReceive();
+#    endif
+#    ifdef ZgatewayRTL_433
+  disableRTLreceive();
+#    endif
+#  endif
+#  ifdef ZgatewayRF2
+  disableRF2Receive();
+#  endif
+
+#  ifdef ZradioCC1101 // set Receive on and Transmitt off
+  ELECHOUSE_cc1101.SetRx(receiveMhz);
+#  endif
+  mySwitch.disableTransmit();
+  receiveInterupt = RF_RECEIVER_GPIO;
+  mySwitch.enableReceive(RF_RECEIVER_GPIO);
+}
 #endif

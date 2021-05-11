@@ -2,11 +2,11 @@
 ## Compatible parts
 |Module|Purpose|Where to Buy|
 |-|-|-|
-|SRX882 (recommended)|433Mhz Receiver|[compatible parts list](https://docs.google.com/spreadsheets/d/1_5fQjAixzRtepkykmL-3uN3G5bLfQ0zMajM9OBZ1bx0/edit#gid=1323184277)|
-|STX882 (recommended)|433Mhz Transmitter|[compatible parts list](https://docs.google.com/spreadsheets/d/1_5fQjAixzRtepkykmL-3uN3G5bLfQ0zMajM9OBZ1bx0/edit#gid=1323184277)|
-|XD RF 5V|433Mhz Receiver|[compatible parts list](https://docs.google.com/spreadsheets/d/1_5fQjAixzRtepkykmL-3uN3G5bLfQ0zMajM9OBZ1bx0/edit#gid=1323184277)|
-|FS1000A|433Mhz Transmitter|[compatible parts list](https://docs.google.com/spreadsheets/d/1_5fQjAixzRtepkykmL-3uN3G5bLfQ0zMajM9OBZ1bx0/edit#gid=1323184277)|
-|CC1101|433Mhz Transceiver|[compatible parts list](https://docs.google.com/spreadsheets/d/1_5fQjAixzRtepkykmL-3uN3G5bLfQ0zMajM9OBZ1bx0/edit#gid=1323184277)|
+|SRX882 (recommended)|433Mhz Receiver|[compatible parts list](https://compatible.openmqttgateway.com/index.php/parts)|
+|STX882 (recommended)|433Mhz Transmitter|[compatible parts list](https://compatible.openmqttgateway.com/index.php/parts)|
+|XD RF 5V|433Mhz Receiver|[compatible parts list](https://compatible.openmqttgateway.com/index.php/parts)|
+|FS1000A|433Mhz Transmitter|[compatible parts list](https://compatible.openmqttgateway.com/index.php/parts)|
+|CC1101|433Mhz Transceiver|[compatible parts list](https://compatible.openmqttgateway.com/index.php/parts)|
 
 ## Pinout
 |Board| Receiver Pin| Emitter Pin|
@@ -27,6 +27,7 @@ Connect the Emitter and Receiver to a 5V (**3.3V** for CC1101) supply source, an
 |ESP8266|D2/**D3**/D1/D8|**RX**/D2|D5|**3V3**|D7|D6|D8|GND
 |ESP32|**27**/26|12|D18|**3V3**|D23|D19|D5|GND
 
+To use the CC1101 module, `ZradioCC1101` must be uncomment in the `User_config.h` or added to the `build_flags`.
 More information about the [CC1101 wiring](https://github.com/LSatan/SmartRC-CC1101-Driver-Lib#wiring).
 
 

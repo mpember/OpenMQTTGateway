@@ -44,11 +44,12 @@ Note that the gateway return one or two measurement value each time. The differe
 * Steps
 * Weight
 * Impedance
-* Battery (mi jia only)
+* Battery
+* Voltage
 
 The infos will appear like this on your MQTT broker:
 
-`home/OpenMQTTGateway/BTtoMQTT/4C33A6603C79 {"hum":"52.6","tem":"19.2"}`
+`home/OpenMQTTGateway/BTtoMQTT/4C33A6603C79 {"hum":"52.6","tempc":"19.2","tempf":"66.56"}`
 
 More info are available on [my blog](https://1technophile.blogspot.fr/2017/11/mi-flora-integration-to-openmqttgateway.html)  (especially about how it was implemented with HM10)
 
@@ -73,9 +74,10 @@ So as to keep your white/black list persistent you can publish it with the retai
 `mosquitto_pub -r -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"white-list":["01:23:14:55:16:15","4C:65:77:88:9C:79","4C:65:A6:66:3C:79"]}'`
 :::
 
-## Setting the time between scans and force a scan
+## Setting the time between BLE scans and force a scan
 
-If you want to change the time between readings you can change the interval by MQTT, if you want the BLE scan every 66seconds:
+If you want to change the time between readings you can change the interval by MQTT.
+For example, if you want the BLE to scan every 66 seconds:
 
 `mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"interval":66000}'`
 
@@ -83,9 +85,60 @@ you can also force a scan to be done by the following command:
 
 `mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"interval":0}'`
 
-Once done the previous value of interval will be recovered.
+::: tip
+With Home Assistant, this command is directly available through MQTT auto discovery as a switch into the HASS OpenMQTTGateway device entities list.
+:::
 
-The default value is set into config_BT.h
+Once the forced scan has completed, the previous scan interval value will be restored. Forcing a scan command trigger also a BLE connect process after the scan (see below).
+
+The default value `TimeBtwRead` is set into config_BT.h or into your .ini file for platformio users.
+
+If you want to scan continuously for BLE devices, for example for beacon location you can set the interval to 1ms:
+
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"interval":1}'`
+
+In this case you should deactivate the BLE connection mechanism to avoid concurrency between scan and connections (see chapter below, bleconnect).
+
+::: tip
+For certain devices like LYWSD03MMC OpenMQTTGateway use a connection (due to the fact that the advertized data are encrypted), this connection mechanism is launched after every `ScanBeforeConnect` per default, you can modify it by following the procedure below.
+:::
+
+## Setting the number of scans between before connect attempt
+
+If you want to change the number of BLE scans that are done before a BLE connect you can change it by MQTT, if you want the BLE connect to be every 30 scans:
+
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"scanbcnct":30}'`
+
+The BLE connect will be done every 30 * (`TimeBtwRead` + `Scan_duration`), 30 * (55000 + 10000) = 1950000ms
+
+## Setting if the gateway publishes all the BLE devices scanned or only the detected sensors
+
+If you want to change this characteristic:
+
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"onlysensors":true}'`
+
+::: tip
+With Home Assistant, this command is directly avalaible through MQTT auto discovery as a switch into the HASS OpenMQTTGateway device entities list.
+:::
+
+The gateway will publish only the detected sensors like Mi Flora, Mi jia, LYWSD03MMC... and not the other BLE devices. This is usefull if you don't use the gateway for presence detection but only to retrieve sensors data.
+
+## Setting if the gateway connects to BLE devices eligibles on ESP32
+
+If you want to change this characteristic:
+
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"bleconnect":false}'`
+
+::: tip
+With Home Assistant, this command is directly avalaible through MQTT auto discovery as a switch into the HASS OpenMQTTGateway device entities list.
+:::
+
+## Setting if the gateway publish into Home Assistant Home presence topic
+
+If you want to publish to Home Assistant presence topic, you can activate this function by the HASS interface (this command is auto discovered), [here is a yaml example](../integrate/home_assistant.md#mqtt-room-presence).
+Or by an MQTT command.
+
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"hasspresence":true}'`
 
 ## Setting the minimum RSSI accepted to publish device data
 
@@ -95,7 +148,7 @@ If you want to change the minimum RSSI value accepted for a device to be publish
 
 you can also accept all the devices by the following command:
 
-`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"minrssi":0}'`
+`mosquitto_pub -t home/OpenMQTTGateway/commands/MQTTtoBT/config -m '{"minrssi":-200}'`
 
 The default value is set into config_BT.h
 

@@ -28,7 +28,8 @@ module.exports = {
         { text: 'Blog', link: 'https://1technophile.blogspot.com'},
         { text: 'Docs', link: '/'},
         { text: 'Community', link: 'https://community.openmqttgateway.com', target:'_self', rel:''},
-        { text: 'Devices', link: 'https://docs.google.com/spreadsheets/d/1_5fQjAixzRtepkykmL-3uN3G5bLfQ0zMajM9OBZ1bx0/edit#gid=2126158079'}
+        { text: 'Devices', link: 'https://compatible.openmqttgateway.com/index.php/devices'},
+        { text: 'Boards', link: 'https://compatible.openmqttgateway.com/index.php/boards'}
       ],
       sidebar: [
         ['/','0 - What is it for 🏠'],
@@ -39,6 +40,7 @@ module.exports = {
           children: [
             'prerequisites/devices',
             'prerequisites/board',
+            'prerequisites/parts',
             'prerequisites/broker',
             'prerequisites/controller']
         },
@@ -51,6 +53,7 @@ module.exports = {
             'setitup/ir',
             'setitup/lora',
             'setitup/gsm',
+            'setitup/rs232',
             'setitup/sensors',
             'setitup/actuators'
           ]
@@ -60,8 +63,7 @@ module.exports = {
           sidebarDepth: 1,    // optional, defaults to 1
           children: [
             'upload/binaries',
-            'upload/pio',
-            'upload/arduino-ide',
+            'upload/builds',
             'upload/portal',
             'upload/advanced-configuration',
             'upload/troubleshoot'
@@ -76,6 +78,7 @@ module.exports = {
             'use/ir',
             'use/lora',
             'use/gsm',
+            'use/rs232',
             'use/rfm69',
             'use/sensors',
             'use/actuators',

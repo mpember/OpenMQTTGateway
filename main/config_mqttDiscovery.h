@@ -29,13 +29,15 @@
 
 extern String getUniqueId(String name, String sufix);
 extern void pubMqttDiscovery();
-extern void createDiscoveryFromList(char* mac, char* sensorList[][8], int sensorCount);
+extern void createDiscoveryFromList(char* mac, char* sensorList[][8], int sensorCount,
+                                    char* device_name, char* device_manufacturer, char* device_model);
 extern void createDiscovery(char* sensor_type,
                             char* state_topic, char* s_name, char* unique_id,
                             char* availability_topic, char* device_class, char* value_template,
                             char* payload_on, char* payload_off, char* unit_of_meas,
                             int off_delay,
-                            char* payload_available, char* payload_not_avalaible, bool child_device, char* command_topic);
+                            char* payload_available, char* payload_not_avalaible, bool gateway_entity, char* command_topic,
+                            char* device_name, char* device_manufacturer, char* device_model, char* device_mac, bool retainCmd);
 
 #define discovery_Topic "homeassistant"
 
@@ -53,7 +55,6 @@ extern void createDiscovery(char* sensor_type,
 #  define jsonFor      "{{ value_json.for }}"
 #  define jsonMoi      "{{ value_json.moi }}"
 #  define jsonHum      "{{ value_json.hum }}"
-#  define jsonTemp     "{{ value_json.tem }}" // remove for 0.9.6 release
 #  define jsonStep     "{{ value_json.steps }}"
 #  define jsonWeight   "{{ value_json.weight }}"
 #  define jsonPresence "{{ value_json.presence }}"
@@ -66,12 +67,15 @@ extern void createDiscovery(char* sensor_type,
 #  define jsonVolt     "{{ value_json.volt }}"
 #  define jsonCurrent  "{{ value_json.current }}"
 #  define jsonPower    "{{ value_json.power }}"
+#  define jsonEnergy   "{{ value_json.energy }}"
 #  define jsonGpio     "{{ value_json.gpio }}"
 #  define jsonFtcd     "{{ value_json.ftcd }}"
 #  define jsonWm2      "{{ value_json.wattsm2 }}"
 #  define jsonAdc      "{{ value_json.adc }}"
 #  define jsonPa       "{{ float(value_json.pa) * 0.01 }}"
 #  define jsonId       "{{ value_json.id }}"
+#  define jsonAddress  "{{ value_json.address }}"
+#  define jsonOpen     "{{ value_json.open }}"
 #else // Home assistant autodiscovery value key definition
 #  define jsonBatt     "{{ value_json.batt | is_defined }}"
 #  define jsonLux      "{{ value_json.lux | is_defined }}"
@@ -80,7 +84,6 @@ extern void createDiscovery(char* sensor_type,
 #  define jsonFor      "{{ value_json.for | is_defined }}"
 #  define jsonMoi      "{{ value_json.moi | is_defined }}"
 #  define jsonHum      "{{ value_json.hum | is_defined }}"
-#  define jsonTemp     "{{ value_json.tem | is_defined }}" // remove for 0.9.6 release
 #  define jsonStep     "{{ value_json.steps | is_defined }}"
 #  define jsonWeight   "{{ value_json.weight | is_defined }}"
 #  define jsonPresence "{{ value_json.presence | is_defined }}"
@@ -93,12 +96,15 @@ extern void createDiscovery(char* sensor_type,
 #  define jsonVolt     "{{ value_json.volt | is_defined }}"
 #  define jsonCurrent  "{{ value_json.current | is_defined }}"
 #  define jsonPower    "{{ value_json.power | is_defined }}"
+#  define jsonEnergy   "{{ value_json.energy | is_defined }}"
 #  define jsonGpio     "{{ value_json.gpio | is_defined }}"
 #  define jsonFtcd     "{{ value_json.ftcd | is_defined }}"
 #  define jsonWm2      "{{ value_json.wattsm2 | is_defined }}"
 #  define jsonAdc      "{{ value_json.adc | is_defined }}"
 #  define jsonPa       "{{ float(value_json.pa) * 0.01 | is_defined }}"
 #  define jsonId       "{{ value_json.id | is_defined }}"
+#  define jsonAddress  "{{ value_json.address | is_defined }}"
+#  define jsonOpen     "{{ value_json.open | is_defined }}"
 #endif
 
 #endif

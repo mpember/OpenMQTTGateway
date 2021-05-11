@@ -62,8 +62,8 @@
 
 /*-------------DEFINE YOUR NETWORK PARAMETERS BELOW----------------*/
 
-//#define NetworkAdvancedSetup true //uncomment if you want to set advanced network parameters for arduino boards, not uncommented you can set the IP and mac only
-#ifdef NetworkAdvancedSetup // for arduino boards advanced config
+//#define NetworkAdvancedSetup true //uncomment if you want to set advanced network parameters, not uncommented you can set the IP and mac only
+#ifdef NetworkAdvancedSetup
 #  if defined(ESP8266) || defined(ESP32)
 const byte ip[] = {192, 168, 1, 99}; //ip adress of the gateway, already defined for arduino below
 #  endif
@@ -78,6 +78,8 @@ const byte subnet[] = {255, 255, 255, 0};
 const byte ip[] = {192, 168, 1, 99};
 const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield mac adress
 #endif
+
+//#define ESP32_ETHERNET=true // Uncomment to use Ethernet module on OLIMEX ESP32 Ethernet gateway
 
 #if defined(ESPWifiManualSetup) // for nodemcu, weemos and esp8266
 #  ifndef wifi_ssid
@@ -174,34 +176,13 @@ const char* certificate CERT_ATTRIBUTE = R"EOF("
 
 /*------------------DEEP SLEEP parameters ------------------*/
 //DEFAULT_LOW_POWER_MODE 0 to normal mode (no power consumption optimisations)
-//DEFAULT_LOW_POWER_MODE 1 to activate deep sleep with LCD ON when a function is processing,
-//DEFAULT_LOW_POWER_MODE 2 to activate deep sleep with LED ON when a function is processing (LCD is turned OFF)
+//DEFAULT_LOW_POWER_MODE 1 to activate deep sleep
+//DEFAULT_LOW_POWER_MODE 2 to activate deep sleep (LCD is turned OFF)
 #ifdef ESP32
 #  ifndef DEFAULT_LOW_POWER_MODE
 #    define DEFAULT_LOW_POWER_MODE 0
 #  endif
-#  ifndef LOW_POWER_LED
-#    define LOW_POWER_LED 2
-#  endif
-#  ifndef LOW_POWER_LED_OFF
-#    define LOW_POWER_LED_OFF 1
-#  endif
-int low_power_mode = DEFAULT_LOW_POWER_MODE;
-#endif
-
-// WIFI mode, uncomment to force a wifi mode, if not uncommented the ESP will connect without a mode forced
-// if there is a reconnection issue it will try to connect with G mode and if not working with B mode
-#ifdef ESP32
-#  include "esp_wifi.h"
-uint8_t wifiProtocol = 0; // default mode, automatic selection
-    //uint8_t wifiProtocol = WIFI_PROTOCOL_11B;
-    //uint8_t wifiProtocol = WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G; // can't have only one https://github.com/espressif/esp-idf/issues/702
-    //uint8_t wifiProtocol = WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N; // can't have only one https://github.com/espressif/esp-idf/issues/702
-#elif ESP8266
-uint8_t wifiProtocol = 0; // default mode, automatic selection
-    //uint8_t wifiProtocol = WIFI_PHY_MODE_11B;
-    //uint8_t wifiProtocol = WIFI_PHY_MODE_11G;
-    //uint8_t wifiProtocol = WIFI_PHY_MODE_11N;
+int lowpowermode = DEFAULT_LOW_POWER_MODE;
 #endif
 
 /*-------------DEFINE THE MODULES YOU WANT BELOW----------------*/
@@ -212,6 +193,7 @@ uint8_t wifiProtocol = 0; // default mode, automatic selection
 //#define ZgatewayLORA   "LORA"       //ESP8266, Arduino, ESP32
 //#define ZgatewayPilight "Pilight" //ESP8266, Arduino, ESP32
 //#define ZgatewayWeatherStation "WeatherStation" //ESP8266, Arduino, ESP32
+//#define ZgatewayGFSunInverter "GFSunInverter"   //ESP32
 //#define ZgatewayBT     "BT"       //ESP8266, ESP32
 //#define ZgatewayRF2    "RF2"      //ESP8266, Arduino, ESP32
 //#define ZgatewaySRFB   "SRFB"     //                          Sonoff RF Bridge
@@ -231,10 +213,15 @@ uint8_t wifiProtocol = 0; // default mode, automatic selection
 //#define ZsensorGPIOKeyCode "GPIOKeyCode" //ESP8266, Arduino, ESP32
 //#define ZsensorGPIOInput "GPIOInput" //ESP8266, Arduino, ESP32
 //#define ZmqttDiscovery "HADiscovery"//ESP8266, Arduino, ESP32, Sonoff RF Bridge
-//#define ZactuatorFASTLED "FASTLED"  //ESP8266, Arduino, ESP32, Sonoff RF Bridge
+//#define ZactuatorFASTLED "FASTLED" //ESP8266, Arduino, ESP32, Sonoff RF Bridge
 //#define ZboardM5STICKC "M5StickC"
-//#define ZboardM5STACK "ZboardM5STACK"
-//#define ZradioCC1101  "CC1101" //ESP8266, ESP32
+//#define ZboardM5STICKCP "M5StickCP"
+//#define ZboardM5STACK  "ZboardM5STACK"
+//#define ZradioCC1101   "CC1101"   //ESP8266, ESP32
+//#define ZactuatorPWM   "PWM"      //ESP8266, ESP32
+//#define ZsensorSHTC3 "SHTC3" //ESP8266, Arduino, ESP32,  Sonoff RF Bridge
+//#define ZactuatorSomfy "Somfy"    //ESP8266, Arduino, ESP32
+//#define ZgatewayRS232   "RS232"  //ESP8266, Arduino, ESP32
 
 /*-------------DEFINE YOUR MQTT ADVANCED PARAMETERS BELOW----------------*/
 #ifndef version_Topic
@@ -282,38 +269,47 @@ uint8_t wifiProtocol = 0; // default mode, automatic selection
 #endif
 
 /*-------------DEFINE PINs FOR STATUS LEDs----------------*/
-#ifndef led_receive
+#ifndef LED_RECEIVE
 #  ifdef ESP8266
-#    define led_receive 40
+#    define LED_RECEIVE 40
 #  elif ESP32
-#    define led_receive 40
+#    define LED_RECEIVE 40
 #  elif __AVR_ATmega2560__ //arduino mega
-#    define led_receive 40
+#    define LED_RECEIVE 40
 #  else //arduino uno/nano
-#    define led_receive 40
+#    define LED_RECEIVE 40
 #  endif
 #endif
-#ifndef led_send
+#ifndef LED_RECEIVE_ON
+#  define LED_RECEIVE_ON HIGH
+#endif
+#ifndef LED_SEND
 #  ifdef ESP8266
-#    define led_send 42
+#    define LED_SEND 42
 #  elif ESP32
-#    define led_send 42
+#    define LED_SEND 42
 #  elif __AVR_ATmega2560__ //arduino mega
-#    define led_send 42
+#    define LED_SEND 42
 #  else //arduino uno/nano
-#    define led_send 42
+#    define LED_SEND 42
 #  endif
 #endif
-#ifndef led_info
+#ifndef LED_SEND_ON
+#  define LED_SEND_ON HIGH
+#endif
+#ifndef LED_INFO
 #  ifdef ESP8266
-#    define led_info 44
+#    define LED_INFO 44
 #  elif ESP32
-#    define led_info 44
+#    define LED_INFO 44
 #  elif __AVR_ATmega2560__ //arduino mega
-#    define led_info 44
+#    define LED_INFO 44
 #  else //arduino uno/nano
-#    define led_info 44
+#    define LED_INFO 44
 #  endif
+#endif
+#ifndef LED_INFO_ON
+#  define LED_INFO_ON HIGH
 #endif
 
 #ifdef ESP8266
@@ -331,7 +327,9 @@ uint8_t wifiProtocol = 0; // default mode, automatic selection
 #ifdef ZgatewaySRFB
 #  define SERIAL_BAUD 19200
 #else
-#  define SERIAL_BAUD 115200
+#  ifndef SERIAL_BAUD
+#    define SERIAL_BAUD 115200
+#  endif
 #endif
 /*--------------MQTT general topics-----------------*/
 // global MQTT subject listened by the gateway to execute commands (send RF, IR or others)
@@ -342,35 +340,45 @@ uint8_t wifiProtocol = 0; // default mode, automatic selection
 // key used for launching commands to the gateway
 #define restartCmd "restart"
 #define eraseCmd   "erase"
+#define statusCmd  "status"
 
 // uncomment the line below to integrate msg value into the subject when receiving
 //#define valueAsASubject true
 
-#if defined(ESP8266) || defined(ESP32)
-#  define JSON_MSG_BUFFER    512 // Json message max buffer size, don't put 1024 or higher it is causing unexpected behaviour on ESP8266
+#if defined(ESP32)
+#  define JSON_MSG_BUFFER    768
+#  define SIGNAL_SIZE_UL_ULL uint64_t
+#  define STRTO_UL_ULL       strtoull
+#elif defined(ESP8266)
+#  define JSON_MSG_BUFFER    512 // Json message max buffer size, don't put 768 or higher it is causing unexpected behaviour on ESP8266
 #  define SIGNAL_SIZE_UL_ULL uint64_t
 #  define STRTO_UL_ULL       strtoull
 #elif defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1280__)
-#  define JSON_MSG_BUFFER    512 // Json message max buffer size, don't put 1024 or higher it is causing unexpected behaviour on ESP8266
+#  define JSON_MSG_BUFFER    512 // Json message max buffer size, don't put 1024 or higher
 #  define SIGNAL_SIZE_UL_ULL uint64_t
 #  define STRTO_UL_ULL       strtoul
 #else // boards with smaller memory
-#  define JSON_MSG_BUFFER    64 // Json message max buffer size, don't put 1024 or higher it is causing unexpected behaviour on ESP8266
+#  define JSON_MSG_BUFFER    64 // Json message max buffer size, don't put 1024 or higher
 #  define SIGNAL_SIZE_UL_ULL uint32_t
 #  define STRTO_UL_ULL       strtoul
 #endif
 
-#if defined(ZgatewayRF) || defined(ZgatewayIR) || defined(ZgatewaySRFB) || defined(ZgatewaySRFB) || defined(ZgatewayWeatherStation)
+#if defined(ZgatewayRF) || defined(ZgatewayIR) || defined(ZgatewaySRFB) || defined(ZgatewayWeatherStation)
 // variable to avoid duplicates
-#  define time_avoid_duplicate 3000 // if you want to avoid duplicate mqtt message received set this to > 0, the value is the time in milliseconds during which we don't publish duplicates
+#  ifndef time_avoid_duplicate
+#    define time_avoid_duplicate 3000 // if you want to avoid duplicate mqtt message received set this to > 0, the value is the time in milliseconds during which we don't publish duplicates
+#  endif
 #endif
 
 #define TimeBetweenReadingSYS        120 // time between (s) system readings (like memory)
+#define TimeLedON                    1 // time LED are ON
 #define InitialMQTTConnectionTimeout 10 // time estimated (s) before the board is connected to MQTT
 #define subjectSYStoMQTT             "/SYStoMQTT"
 #define subjectMQTTtoSYSset          "/commands/MQTTtoSYS/config"
 
 /*-------------------DEFINE LOG LEVEL----------------------*/
-#define LOG_LEVEL LOG_LEVEL_NOTICE
+#ifndef LOG_LEVEL
+#  define LOG_LEVEL LOG_LEVEL_NOTICE
+#endif
 
 #endif

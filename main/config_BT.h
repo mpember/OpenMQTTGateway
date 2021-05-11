@@ -29,23 +29,73 @@
 extern void setupBT();
 extern bool BTtoMQTT();
 extern void MQTTtoBT(char* topicOri, JsonObject& RFdata);
+extern void emptyBTQueue();
+extern void launchBTDiscovery();
+
+#ifdef ESP32
+extern int btQueueBlocked;
+extern int btQueueLengthSum;
+extern int btQueueLengthCount;
+#  ifndef AttemptBLECOnnect
+#    define AttemptBLECOnnect true //do we by default attempt a BLE connection to sensors with ESP32
+#  endif
+bool bleConnect = AttemptBLECOnnect;
+#endif
+
 /*----------------------BT topics & parameters-------------------------*/
 #define subjectBTtoMQTT    "/BTtoMQTT"
 #define subjectMQTTtoBTset "/commands/MQTTtoBT/config"
 #define MinimumRSSI        -100 //default minimum rssi value, all the devices below -90 will not be reported
-#define Scan_duration      10 //define the time for a scan --WARNING-- changing this value can lead to instability on ESP32
-#define HM                 -10
-#define HMSerialSpeed      9600 // Communication speed with the HM module, softwareserial doesn't support 115200
-//#define HM-11 // uncomment this line if you use HM-11 and comment the line above
-//#define HM_BLUE_LED_STOP true //uncomment to stop the blue led light of HM1X
-#define BLEdelimiter         "4f4b2b444953413a" // OK+DISA:
-#define ServicedataMinLength 29
 
-#ifndef TimeBtw_Read
-#  define TimeBtw_Read 55555 //define default time between 2 scans
+#ifndef Scan_duration
+#  define Scan_duration 10000 //define the time for a scan
+#endif
+#ifndef BLEScanInterval
+#  define BLEScanInterval 52 // How often the scan occurs / switches channels; in milliseconds,
+#endif
+#ifndef BLEScanWindow
+#  define BLEScanWindow 30 // How long to scan during the interval; in milliseconds.
+#endif
+#ifndef ActiveBLEScan
+#  define ActiveBLEScan true // Set active scanning, this will get more data from the advertiser.
+#endif
+#ifndef ScanBeforeConnect
+#  define ScanBeforeConnect 10 //define number of scans before connecting to BLE devices (ESP32 only, minimum 1)
+#endif
+#ifndef BLEScanDuplicateCacheSize
+#  define BLEScanDuplicateCacheSize 200
+#endif
+#ifndef TimeBtwRead
+#  define TimeBtwRead 55555 //define default time between 2 scans
+#endif
+#ifndef PublishOnlySensors
+#  define PublishOnlySensors false //false if we publish all BLE devices discovered or true only the identified sensors (like temperature sensors)
+#endif
+#ifndef HassPresence
+#  define HassPresence false //false if we publish into Home Assistant presence topic
 #endif
 
-unsigned int BLEinterval = TimeBtw_Read; //time between 2 scans
+#ifndef BTQueueSize
+#  define BTQueueSize 4 // lockless queue size for multi core cases (ESP32 currently)
+#endif
+
+#define HMSerialSpeed 9600 // Communication speed with the HM module, softwareserial doesn't support 115200
+//#define HM_BLUE_LED_STOP true //uncomment to stop the blue led light of HM1X
+
+#define BLEdelimiter       "4f4b2b444953413a" // OK+DISA:
+#define BLEEndOfDiscovery  "4f4b2b4449534345" // OK+DISCE
+#define BLEdelimiterLength 16
+#define CRLR               "0d0a"
+#define CRLR_Length        4
+#define BLE_CNCT_TIMEOUT   3000
+
+#define ServicedataMinLength 27
+
+unsigned int BLEinterval = TimeBtwRead; //time between 2 scans
+unsigned int BLEscanBeforeConnect = ScanBeforeConnect; //Number of BLE scans between connection cycles
+unsigned long scanCount = 0;
+bool publishOnlySensors = PublishOnlySensors;
+bool hassPresence = HassPresence;
 
 #ifndef pubKnownBLEServiceData
 #  define pubKnownBLEServiceData false // define true if you want to publish service data belonging to recognised sensors
@@ -64,8 +114,34 @@ unsigned int BLEinterval = TimeBtw_Read; //time between 2 scans
 #endif
 
 /*-------------------HOME ASSISTANT ROOM PRESENCE ----------------------*/
-// if not commented Home presence integration with HOME ASSISTANT is activated
 #define subjectHomePresence "home_presence/" // will send Home Assistant room presence message to this topic (first part is same for all rooms, second is room name)
+
+enum ble_sensor_model {
+  UNKNOWN_MODEL = -1,
+  BEGINING = 0,
+  HHCCJCY01HHCC,
+  VEGTRUG,
+  LYWSDCGQ,
+  JQJCY01YM,
+  LYWSD02, //5
+  CGG1,
+  CGP1W,
+  MUE4094RT,
+  CGD1,
+  MIBAND, //10
+  XMTZC04HM,
+  XMTZC05HM,
+  INKBIRD,
+  LYWSD03MMC,
+  MHO_C401,
+  LYWSD03MMC_ATC,
+  INODE_EM,
+  CGDK2,
+  LYWSD03MMC_PVVX,
+  CGH1,
+  CGPR1,
+  WS02,
+};
 
 /*-------------------PIN DEFINITIONS----------------------*/
 #if !defined(BT_RX) || !defined(BT_TX)
