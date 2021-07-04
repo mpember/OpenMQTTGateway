@@ -123,16 +123,6 @@ const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield
 #  define mqtt_max_packet_size 128
 #endif
 
-// activate the use of TLS for secure connection to the MQTT broker
-// MQTT_SERVER must be set to the Common Name (CN) of the broker's certificate
-//#define SECURE_CONNECTION
-
-#ifdef SECURE_CONNECTION
-#  define MQTT_DEFAULT_PORT "8883"
-#else
-#  define MQTT_DEFAULT_PORT "1883"
-#endif
-
 #ifndef MQTT_USER
 #  define MQTT_USER "your_username"
 #endif
@@ -143,35 +133,110 @@ const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield
 #  define MQTT_SERVER "192.168.1.17"
 #endif
 #ifndef MQTT_PORT
-#  define MQTT_PORT MQTT_DEFAULT_PORT
+#  define MQTT_PORT "1883"
 #endif
 
-#ifdef SECURE_CONNECTION
-#  if defined(ESP8266) || defined(ESP32)
-#    if defined(ESP32)
-#      define CERT_ATTRIBUTE
-#    elif defined(ESP8266)
-#      define CERT_ATTRIBUTE PROGMEM
-#    endif
-
+#if defined(ESP8266) || defined(ESP32)
 // The root ca certificate used for validating the MQTT broker
 // The certificate must be in PEM ascii format
-const char* certificate CERT_ATTRIBUTE = R"EOF("
+const char* certificate PROGMEM = R"EOF("
 -----BEGIN CERTIFICATE-----
 ...
 -----END CERTIFICATE-----
 ")EOF";
 
-// specify a NTP server here or else the NTP server from DHCP is used
-//#    define NTP_SERVER "pool.ntp.org"
-#  else
-#    error "only ESP8266 and ESP32 support SECURE_CONNECTION with TLS"
-#  endif
-#endif
-
-#if defined(ESP8266) || defined(ESP32)
 #  define ATTEMPTS_BEFORE_BG 10 // Number of wifi connection attempts before going to BG protocol
 #  define ATTEMPTS_BEFORE_B  20 // Number of wifi connection attempts before going to B protocol
+
+#  ifndef NTP_SERVER
+#    define NTP_SERVER "pool.ntp.org"
+#  endif
+
+#  ifndef MQTT_SECURE_DEFAULT
+#    define MQTT_SECURE_DEFAULT false
+#  endif
+
+//#  define MQTT_HTTPS_FW_UPDATE //uncomment to enable updating via mqtt message.
+
+#  ifdef MQTT_HTTPS_FW_UPDATE
+// If used, this should be set to the root CA certificate of the server hosting the firmware.
+// The certificate must be in PEM ascii format.
+// The default certificate is for github.
+const char* OTAserver_cert PROGMEM = R"EOF("
+-----BEGIN CERTIFICATE-----
+MIIDxTCCAq2gAwIBAgIQAqxcJmoLQJuPC3nyrkYldzANBgkqhkiG9w0BAQUFADBs
+MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3
+d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBIaWdoIEFzc3VyYW5j
+ZSBFViBSb290IENBMB4XDTA2MTExMDAwMDAwMFoXDTMxMTExMDAwMDAwMFowbDEL
+MAkGA1UEBhMCVVMxFTATBgNVBAoTDERpZ2lDZXJ0IEluYzEZMBcGA1UECxMQd3d3
+LmRpZ2ljZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgSGlnaCBBc3N1cmFuY2Ug
+RVYgUm9vdCBDQTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMbM5XPm
++9S75S0tMqbf5YE/yc0lSbZxKsPVlDRnogocsF9ppkCxxLeyj9CYpKlBWTrT3JTW
+PNt0OKRKzE0lgvdKpVMSOO7zSW1xkX5jtqumX8OkhPhPYlG++MXs2ziS4wblCJEM
+xChBVfvLWokVfnHoNb9Ncgk9vjo4UFt3MRuNs8ckRZqnrG0AFFoEt7oT61EKmEFB
+Ik5lYYeBQVCmeVyJ3hlKV9Uu5l0cUyx+mM0aBhakaHPQNAQTXKFx01p8VdteZOE3
+hzBWBOURtCmAEvF5OYiiAhF8J2a3iLd48soKqDirCmTCv2ZdlYTBoSUeh10aUAsg
+EsxBu24LUTi4S8sCAwEAAaNjMGEwDgYDVR0PAQH/BAQDAgGGMA8GA1UdEwEB/wQF
+MAMBAf8wHQYDVR0OBBYEFLE+w2kD+L9HAdSYJhoIAu9jZCvDMB8GA1UdIwQYMBaA
+FLE+w2kD+L9HAdSYJhoIAu9jZCvDMA0GCSqGSIb3DQEBBQUAA4IBAQAcGgaX3Nec
+nzyIZgYIVyHbIUf4KmeqvxgydkAQV8GK83rZEWWONfqe/EW1ntlMMUu4kehDLI6z
+eM7b41N5cdblIZQB2lWHmiRk9opmzN6cN82oNLFpmyPInngiK3BD41VHMWEZ71jF
+hS9OMPagMRYjyOfiZRYzy78aG6A9+MpeizGLYAiJLQwGXFK3xPkKmNEVX58Svnw2
+Yzi9RKR/5CYrCsSXaQ3pjOLAEFe4yHYSkVXySGnYvCoCWw9E1CAx2/S6cCZdkGCe
+vEsXCS+0yx5DaMkHJ8HSXPfqIbloEpw8nL+e/IBcm2PN7EeqJSdnoDfzAIJ9VNep
++OkuE6N36B9K
+-----END CERTIFICATE-----
+")EOF";
+
+#    ifndef MQTT_HTTPS_FW_UPDATE_USE_PASSWORD
+#      define MQTT_HTTPS_FW_UPDATE_USE_PASSWORD 1 // Set this to 0 if not using TLS connection to MQTT broker to prevent clear text passwords being sent.
+#    endif
+#  endif
+
+#  ifndef MQTT_SECURE_SELF_SIGNED
+#    define MQTT_SECURE_SELF_SIGNED 0
+#  endif
+
+#  ifndef MQTT_SECURE_SELF_SIGNED_CLIENT
+#    define MQTT_SECURE_SELF_SIGNED_CLIENT 1
+#  endif
+
+#  ifndef MQTT_SECURE_SELF_SIGNED_INDEX_DEFAULT
+#    define MQTT_SECURE_SELF_SIGNED_INDEX_DEFAULT 0
+#  endif
+
+#  if MQTT_SECURE_SELF_SIGNED
+const char* ss_server_cert PROGMEM = R"EOF("
+-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----
+")EOF";
+
+const char* ss_client_cert PROGMEM = R"EOF("
+-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----
+")EOF";
+
+const char* ss_client_key PROGMEM = R"EOF("
+-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----
+")EOF";
+
+struct ss_certs {
+  const char* server_cert;
+  const char* client_cert;
+  const char* client_key;
+};
+
+struct ss_certs certs_array[2] = {
+    {ss_server_cert, ss_client_cert, ss_client_key},
+    {ss_server_cert, ss_client_cert, ss_client_key}};
+
+static_assert(MQTT_SECURE_SELF_SIGNED_INDEX_DEFAULT < (sizeof(certs_array) / sizeof(ss_certs)),
+              "Invalid MQTT self signed default index");
+#  endif
 #endif
 
 /*------------------DEEP SLEEP parameters ------------------*/
@@ -269,33 +334,33 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 #endif
 
 /*-------------DEFINE PINs FOR STATUS LEDs----------------*/
-#ifndef LED_RECEIVE
+#ifndef LED_SEND_RECEIVE
 #  ifdef ESP8266
-#    define LED_RECEIVE 40
+#    define LED_SEND_RECEIVE 40
 #  elif ESP32
-#    define LED_RECEIVE 40
+#    define LED_SEND_RECEIVE 40
 #  elif __AVR_ATmega2560__ //arduino mega
-#    define LED_RECEIVE 40
+#    define LED_SEND_RECEIVE 40
 #  else //arduino uno/nano
-#    define LED_RECEIVE 40
+#    define LED_SEND_RECEIVE 40
 #  endif
 #endif
-#ifndef LED_RECEIVE_ON
-#  define LED_RECEIVE_ON HIGH
+#ifndef LED_SEND_RECEIVE_ON
+#  define LED_SEND_RECEIVE_ON HIGH
 #endif
-#ifndef LED_SEND
+#ifndef LED_ERROR
 #  ifdef ESP8266
-#    define LED_SEND 42
+#    define LED_ERROR 42
 #  elif ESP32
-#    define LED_SEND 42
+#    define LED_ERROR 42
 #  elif __AVR_ATmega2560__ //arduino mega
-#    define LED_SEND 42
+#    define LED_ERROR 42
 #  else //arduino uno/nano
-#    define LED_SEND 42
+#    define LED_ERROR 42
 #  endif
 #endif
-#ifndef LED_SEND_ON
-#  define LED_SEND_ON HIGH
+#ifndef LED_ERROR_ON
+#  define LED_ERROR_ON HIGH
 #endif
 #ifndef LED_INFO
 #  ifdef ESP8266
@@ -336,6 +401,7 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 #define subjectMQTTtoX     "/commands/#"
 #define subjectMultiGTWKey "toMQTT"
 #define subjectGTWSendKey  "MQTTto"
+#define subjectFWUpdate    "firmware_update"
 
 // key used for launching commands to the gateway
 #define restartCmd "restart"

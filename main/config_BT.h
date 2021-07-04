@@ -40,6 +40,13 @@ extern int btQueueLengthCount;
 #    define AttemptBLECOnnect true //do we by default attempt a BLE connection to sensors with ESP32
 #  endif
 bool bleConnect = AttemptBLECOnnect;
+
+// Sets whether to filter publishing of scanned devices that require a connection.
+// Default (1) prevents overwriting the publication of the device connection data with the advertised data.
+#  ifndef BLE_FILTER_CONNECTABLE
+#    define BLE_FILTER_CONNECTABLE 1
+#  endif
+#  include "NimBLEDevice.h"
 #endif
 
 /*----------------------BT topics & parameters-------------------------*/
@@ -131,7 +138,7 @@ enum ble_sensor_model {
   MIBAND, //10
   XMTZC04HM,
   XMTZC05HM,
-  INKBIRD,
+  IBSTH1,
   LYWSD03MMC,
   MHO_C401,
   LYWSD03MMC_ATC,
@@ -141,6 +148,13 @@ enum ble_sensor_model {
   CGH1,
   CGPR1,
   WS02,
+  IBSTH2,
+  IBT4XS,
+  DT24,
+  EDDYSTONE_TLM,
+  MOKOBEACON,
+  MOKOBEACONXPRO,
+  GENERIC,
 };
 
 /*-------------------PIN DEFINITIONS----------------------*/
@@ -156,5 +170,37 @@ enum ble_sensor_model {
 #    define BT_TX 6 //arduino TX connect HM-10 or 11 RX
 #  endif
 #endif
+
+/*---------------INTERNAL USE: DO NOT MODIFY--------------*/
+#ifdef ESP32
+enum ble_val_type {
+  BLE_VAL_STRING = 0,
+  BLE_VAL_HEX,
+  BLE_VAL_INT,
+  BLE_VAL_FLOAT,
+};
+
+struct BLEAction {
+  std::string value;
+  char addr[18];
+  NimBLEUUID service;
+  NimBLEUUID characteristic;
+  bool write;
+  bool complete;
+  uint8_t ttl;
+  ble_val_type value_type;
+};
+#endif
+
+struct BLEdevice {
+  char macAdr[18];
+  bool isDisc;
+  bool isWhtL;
+  bool isBlkL;
+  bool connect;
+  ble_sensor_model sensorModel;
+};
+
+JsonObject& getBTJsonObject(const char* json = NULL, bool haPresenceEnabled = true);
 
 #endif

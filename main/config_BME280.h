@@ -58,4 +58,8 @@ extern void BME280toMQTT();
 unsigned long timebme280 = 0;
 int BME280_i2c_addr = 0x76; // Bosch BME280 I2C Address
 
+// Only supported for ESP
+int BME280_PIN_SDA = SDA; // PIN SDA
+int BME280_PIN_SCL = SCL; // PIN SCL
+
 #endif
